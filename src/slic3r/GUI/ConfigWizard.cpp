@@ -697,7 +697,12 @@ void PageMaterials::reload_presets()
 void PageMaterials::set_compatible_printers_html_window(const std::vector<std::string>& printer_names)
 {
     //Slic3r::GUI::wxGetApp().dark_mode()
-    const auto bgr_clr = wxSystemSettings::GetColour(Slic3r::GUI::wxGetApp().dark_mode() ? wxSYS_COLOUR_WINDOW : wxSYS_COLOUR_MENU);
+    const auto bgr_clr = 
+#if defined(__APPLE__)
+        wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
+#else
+        wxSystemSettings::GetColour(wxSYS_COLOUR_MENU);
+#endif
     const auto bgr_clr_str = wxString::Format(wxT("#%02X%02X%02X"), bgr_clr.Red(), bgr_clr.Green(), bgr_clr.Blue());
     const auto text_clr = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
     const auto text_clr_str = wxString::Format(wxT("#%02X%02X%02X"), text_clr.Red(), text_clr.Green(), text_clr.Blue());
@@ -779,79 +784,16 @@ void PageMaterials::on_material_highlighted(int sel_material)
         return;
     }
     //find matching printers
-    bool first = true;
-    int counter = 0;
     std::vector<std::string> names;
     for (const Preset* printer : materials->printers) {
-        bool compatible = false;
         for (const Preset* material : matching_materials) {
             if (is_compatible_with_printer(PresetWithVendorProfile(*material, material->vendor), PresetWithVendorProfile(*printer, printer->vendor))) {
-                /*if (first)
-                    first = false;
-                else
-                    compatible_printers_label += "\n";//", ";
-                */
-                //compatible_printers_label += printer->name;
                 names.push_back(printer->name);
-                //tabs[counter % 3] += printer->name;
-                //tabs[counter % 3] += "\n";
-                counter++;
-                compatible = true;
                 break;
             }
         }
     }
     set_compatible_printers_html_window(names);
-    /*
-    this->compatible_printers->SetLabel(boost::nowide::widen(compatible_printers_label));
-    this->compatible_printers->Wrap(compatible_printers_width);
-    
-    */
-    /*
-	wxWindowUpdateLocker freeze_guard(this);
-	(void)freeze_guard;
-
-    //std::string compatible_printers_label = "compatible printers:\n";
-    //std::string empty_suplement = std::string();
-	//unselect all printers
-	list_printer->SetSelection(wxNOT_FOUND);
-	//selected material string
-	std::string material_name = list_profile->get_data(sel_material);
-    // get material preset
-    const std::vector<const Preset*> matching_materials = materials->get_presets_by_alias(material_name);
-    if (matching_materials.empty())
-        return;
-    //find matching printers
-    //bool first = true;
-    for (const Preset* printer : materials->printers) {
-        bool compatible = false;
-        for (const Preset* material : matching_materials) {
-            if (is_compatible_with_printer(PresetWithVendorProfile(*material, material->vendor), PresetWithVendorProfile(*printer, printer->vendor))) {
-                //select printer
-                int index = list_printer->find(printer->name);
-                list_printer->SetSelection(index);
-                /*if (first) 
-                    first = false;
-                else
-                    compatible_printers_label += "\n";//", ";
-                compatible_printers_label += printer->name;
-                compatible = true;
-                break;*//*
-            }
-        } 
-        //if(!compatible)
-        //    empty_suplement += std::string(printer->name.length() + 2, ' ');
-    }
-    // fill rest of label with blanks so it maintains legth
-    //compatible_printers_label += empty_suplement;
-    
-    update_lists(0,0,0);
-    list_profile->SetSelection(list_profile->find(material_name));
-
-    //this->compatible_printers->SetLabel(boost::nowide::widen(compatible_printers_label));
-    //this->compatible_printers->Wrap(compatible_printers_width);
-    //Refresh();
-    */
 }
 
 void PageMaterials::update_lists(int sel_printer, int sel_type, int sel_vendor)
