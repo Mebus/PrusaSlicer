@@ -87,8 +87,7 @@ struct Materials
 {
     Technology technology;
     // use vector for the presets to purpose of save of presets sorting in the bundle
-	// size_t is counter of printers compatible with material
-    std::vector<std::pair<const Preset*, size_t>> presets;
+    std::vector<const Preset*> presets;
     // String is alias of material, size_t number of compatible counters 
     std::vector<std::pair<std::string, size_t>> compatibility_counter;
     std::set<std::string> types;
@@ -102,7 +101,7 @@ struct Materials
     bool containts(const Preset *preset) const {
         //return std::find(presets.begin(), presets.end(), preset) != presets.end(); 
 		return std::find_if(presets.begin(), presets.end(),
-			[preset](const std::pair<const Preset*, bool>& element) { return element.first == preset; }) != presets.end();
+			[preset](const Preset* element) { return element == preset; }) != presets.end();
 
     }
 	
@@ -113,8 +112,8 @@ struct Materials
     const std::vector<const Preset*> get_presets_by_alias(const std::string name) {
         std::vector<const Preset*> ret_vec;
         for (auto it = presets.begin(); it != presets.end(); ++it) {
-            if ((*it).first->alias == name)
-                ret_vec.push_back((*it).first);
+            if ((*it)->alias == name)
+                ret_vec.push_back((*it));
         }
         return ret_vec;
     }
@@ -136,13 +135,13 @@ struct Materials
 
 	template<class F> void filter_presets(const Preset* printer, const std::string& type, const std::string& vendor, F cb) {
 		for (auto preset : presets) {
-			const Preset& prst = *(preset.first);
+			const Preset& prst = *(preset);
 			const Preset& prntr = *printer;
 		      if ((printer == nullptr || is_compatible_with_printer(PresetWithVendorProfile(prst, prst.vendor), PresetWithVendorProfile(prntr, prntr.vendor))) &&
-			    (type.empty() || get_type(preset.first) == type) &&
-				(vendor.empty() || get_vendor(preset.first) == vendor)) {
+			    (type.empty() || get_type(preset) == type) &&
+				(vendor.empty() || get_vendor(preset) == vendor)) {
 
-				cb(preset.first);
+				cb(preset);
 			}
 		}
 	}
@@ -325,7 +324,6 @@ struct PageMaterials: ConfigWizardPage
     bool presets_loaded;
 
     wxFlexGridSizer *grid;
-    //wxStaticText *compatible_printers;
     wxHtmlWindow* html_window;
 
     int compatible_printers_width = { 100 };

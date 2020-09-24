@@ -608,15 +608,6 @@ PageMaterials::PageMaterials(ConfigWizard *parent, Materials *materials, wxStrin
     grid->Add(new wxBoxSizer(wxHORIZONTAL));
     grid->Add(btn_sizer, 0, wxALIGN_RIGHT);
 
-    //append_spacer(VERTICAL_SPACING);
-    //auto* notes_sizer = new wxBoxSizer(wxHORIZONTAL);
-    //notes_sizer->Add(compatible_printers);
-    
-
-    //grid->Add(new wxBoxSizer(wxHORIZONTAL));
-    //grid->Add(new wxBoxSizer(wxHORIZONTAL));
-    //grid->Add(new wxBoxSizer(wxHORIZONTAL));
-
     append(grid, 1, wxEXPAND);
 
     append_spacer(VERTICAL_SPACING);
@@ -652,12 +643,6 @@ PageMaterials::PageMaterials(ConfigWizard *parent, Materials *materials, wxStrin
 }
 void PageMaterials::on_paint()
 {
-    /*
-    if (first_paint) {
-        first_paint = false;
-        set_compatible_printers_html_window();
-    }
-    */
 }
 void PageMaterials::on_mouse_move_on_profiles(wxMouseEvent& evt)
 {
@@ -741,8 +726,6 @@ void PageMaterials::set_compatible_printers_html_window(const std::vector<std::s
         "</body>"
         "</html>"
              );
-    //webview_window->SetPage(text, "");
-    //html_window->SetFont(get_default_font_for_dpi(get_dpi_for_window(this)));
     wxFont font = get_default_font_for_dpi(get_dpi_for_window(this));
     const int fs = font.GetPointSize();
     int size[] = { fs,fs,fs,fs,fs,fs,fs };
@@ -1560,7 +1543,7 @@ const std::string Materials::UNKNOWN = "(Unknown)";
 
 void Materials::push(const Preset *preset)
 {
-    presets.emplace_back(preset, 0);
+    presets.emplace_back(preset);
     types.insert(technology & T_FFF
         ? Materials::get_filament_type(preset)
         : Materials::get_material_type(preset));
@@ -1880,14 +1863,14 @@ void ConfigWizard::priv::update_materials(Technology technology)
         for (const auto& preset : filaments.presets) {
 
             const auto filter = [preset](const std::pair<std::string, size_t> element) {
-                return preset.first->alias == element.first;
+                return preset->alias == element.first;
             };
             if (std::find_if(filaments.compatibility_counter.begin(), filaments.compatibility_counter.end(), filter) != filaments.compatibility_counter.end()) {
                 continue;
             }
             std::vector<size_t> idx_with_same_alias;
             for (size_t i = 0; i < filaments.presets.size(); ++i) {
-                if (preset.first->alias == filaments.presets[i].first->alias)
+                if (preset->alias == filaments.presets[i]->alias)
                     idx_with_same_alias.push_back(i);
             }
             size_t counter = 0;
@@ -1897,7 +1880,7 @@ void ConfigWizard::priv::update_materials(Technology technology)
                 bool compatible = false;
                 // Test otrher materials with same alias
                 for (size_t i = 0; i < idx_with_same_alias.size() && !compatible; ++i) {
-                    const Preset& prst = *(filaments.presets[idx_with_same_alias[i]].first);
+                    const Preset& prst = *(filaments.presets[idx_with_same_alias[i]]);
                     const Preset& prntr = *printer;
                     if (is_compatible_with_printer(PresetWithVendorProfile(prst, prst.vendor), PresetWithVendorProfile(prntr, prntr.vendor))) {
                         compatible = true;
@@ -1907,7 +1890,7 @@ void ConfigWizard::priv::update_materials(Technology technology)
                 if (compatible)
                     counter++;
             }
-            filaments.compatibility_counter.emplace_back(preset.first->alias, counter);
+            filaments.compatibility_counter.emplace_back(preset->alias, counter);
         }
     }
 
@@ -1943,14 +1926,14 @@ void ConfigWizard::priv::update_materials(Technology technology)
         for (const auto& preset : sla_materials.presets) {
             
             const auto filter = [preset](const std::pair<std::string, size_t> element) {
-                return preset.first->alias == element.first;
+                return preset->alias == element.first;
             };
             if (std::find_if(sla_materials.compatibility_counter.begin(), sla_materials.compatibility_counter.end(), filter) != sla_materials.compatibility_counter.end()) {
                 continue;
             }
             std::vector<size_t> idx_with_same_alias;
             for (size_t i = 0; i < sla_materials.presets.size(); ++i) {
-                if(preset.first->alias == sla_materials.presets[i].first->alias)
+                if(preset->alias == sla_materials.presets[i]->alias)
                     idx_with_same_alias.push_back(i);
             }
             size_t counter = 0;
@@ -1960,7 +1943,7 @@ void ConfigWizard::priv::update_materials(Technology technology)
                 bool compatible = false;
                 // Test otrher materials with same alias
                 for (size_t i = 0; i < idx_with_same_alias.size() && !compatible; ++i) {
-                    const Preset& prst = *(sla_materials.presets[idx_with_same_alias[i]].first);
+                    const Preset& prst = *(sla_materials.presets[idx_with_same_alias[i]]);
                     const Preset& prntr = *printer;
                     if (is_compatible_with_printer(PresetWithVendorProfile(prst, prst.vendor), PresetWithVendorProfile(prntr, prntr.vendor))) {
                         compatible = true;
@@ -1970,7 +1953,7 @@ void ConfigWizard::priv::update_materials(Technology technology)
                 if (compatible)
                     counter++;
             }
-            sla_materials.compatibility_counter.emplace_back(preset.first->alias, counter);
+            sla_materials.compatibility_counter.emplace_back(preset->alias, counter);
         }
     }
 }
