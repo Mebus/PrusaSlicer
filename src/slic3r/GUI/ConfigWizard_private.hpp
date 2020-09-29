@@ -132,7 +132,6 @@ struct Materials
     const std::string& get_type(const Preset *preset) const;
     const std::string& get_vendor(const Preset *preset) const;
 	
-
 	template<class F> void filter_presets(const Preset* printer, const std::string& type, const std::string& vendor, F cb) {
 		for (auto preset : presets) {
 			const Preset& prst = *(preset);
@@ -341,8 +340,12 @@ struct PageMaterials: ConfigWizardPage
     void select_material(int i);
     void select_all(bool select);
     void clear();
-    void set_compatible_printers_html_window(const std::vector<std::string>& printer_names);
+    void set_compatible_printers_html_window(const std::vector<std::string>& printer_names, bool all_printers = false);
     void clear_compatible_printers_label();
+
+    void sort_list_data(StringList* list, const std::vector<std::reference_wrapper<const std::string>>& data, bool add_All_item, bool material_type_ordering);
+    void sort_list_data(StringList* list, bool add_All_item, bool material_type_ordering);
+    void sort_list_data(PresetList* list);
 
     void on_paint();
     void on_mouse_move_on_profiles(wxMouseEvent& evt);

@@ -573,7 +573,7 @@ PageMaterials::PageMaterials(ConfigWizard *parent, Materials *materials, wxStrin
     const int em = parent->em_unit();
     const int list_h = 30*em;
 
-	list_printer->SetWindowStyle(wxLB_EXTENDED);
+	//list_printer->SetWindowStyle(wxLB_EXTENDED);
 
 	list_printer->SetMinSize(wxSize(23*em, list_h));
     list_type->SetMinSize(wxSize(8*em, list_h));
@@ -639,7 +639,7 @@ PageMaterials::PageMaterials(ConfigWizard *parent, Materials *materials, wxStrin
     list_profile->Bind(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent& evt) { on_mouse_leave_profiles(evt); });
     
     reload_presets();
-    set_compatible_printers_html_window(std::vector<std::string>());
+    set_compatible_printers_html_window(std::vector<std::string>(), false);
 }
 void PageMaterials::on_paint()
 {
@@ -664,10 +664,13 @@ void PageMaterials::reload_presets()
 
 	list_printer->append(_(L("(All)")), &EMPTY);
     list_printer->SetLabelMarkup("<b>bald</b>");
-	for (const Preset* printer : materials->printers) {
-		list_printer->append(printer->name, &printer->name);
-	}
+    std::vector<std::reference_wrapper<const std::string>>names_to_list;
 
+	for (const Preset* printer : materials->printers) {
+		//list_printer->append(printer->name, &printer->name);
+        names_to_list.push_back(printer->name);
+	}
+    sort_list_data(list_printer, names_to_list, true, false);
     if (list_printer->GetCount() > 0) {
         list_printer->SetSelection(0);
 		sel_printer_prev = wxNOT_FOUND;
@@ -679,7 +682,7 @@ void PageMaterials::reload_presets()
     presets_loaded = true;
 }
 
-void PageMaterials::set_compatible_printers_html_window(const std::vector<std::string>& printer_names)
+void PageMaterials::set_compatible_printers_html_window(const std::vector<std::string>& printer_names, bool all_printers)
 {
     //Slic3r::GUI::wxGetApp().dark_mode()
     const auto bgr_clr = 
@@ -692,40 +695,61 @@ void PageMaterials::set_compatible_printers_html_window(const std::vector<std::s
     const auto text_clr = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
     const auto text_clr_str = wxString::Format(wxT("#%02X%02X%02X"), text_clr.Red(), text_clr.Green(), text_clr.Blue());
     wxString first_line = L"Profiles marked with * are not compatible with all installed printers.";
-    wxString second_line = L"Compatible printers:";
-    wxString text = wxString::Format(
-        "<html>"
-        "<style>"
-        "table{border-spacing: 1px;}"
-        "</style>"
-        "<body bgcolor= %s>"
-        "<font color=%s>"
-        "<font size=\"3\">"
-        "%s<br /><br />%s"
-        "<table>"
-        "<tr>"
-        , bgr_clr_str
-        , text_clr_str
-        , first_line
-        , second_line);
-
-    for (int i = 0; i < printer_names.size(); ++i)
-    {
-        text += wxString::Format("<td>%s</td>", boost::nowide::widen(printer_names[i]));
-        if (i % 3 == 2) {
-            text += wxString::Format(
-                "</tr>"
-                "<tr>");
+    wxString text;
+    if (all_printers) {
+        text = wxString::Format(
+            "<html>"
+            "<style>"
+            "table{border-spacing: 1px;}"
+            "</style>"
+            "<body bgcolor= %s>"
+            "<font color=%s>"
+            "<font size=\"3\">"
+            "%s<br /><br /> All installed printers are compatible with selected profile."
+            "</font>"
+            "</font>"
+            "</body>"
+            "</html>"
+            , bgr_clr_str
+            , text_clr_str
+            , first_line
+            );
+    } else {
+        wxString second_line = L"Compatible printers:";
+        text = wxString::Format(
+            "<html>"
+            "<style>"
+            "table{border-spacing: 1px;}"
+            "</style>"
+            "<body bgcolor= %s>"
+            "<font color=%s>"
+            "<font size=\"3\">"
+            "%s<br /><br />%s"
+            "<table>"
+            "<tr>"
+            , bgr_clr_str
+            , text_clr_str
+            , first_line
+            , second_line);
+        for (int i = 0; i < printer_names.size(); ++i)
+        {
+            text += wxString::Format("<td>%s</td>", boost::nowide::widen(printer_names[i]));
+            if (i % 3 == 2) {
+                text += wxString::Format(
+                    "</tr>"
+                    "<tr>");
+            }
         }
+        text += wxString::Format(
+            "</tr>"
+            "</table>"
+            "</font>"
+            "</font>"
+            "</body>"
+            "</html>"
+        );
     }
-    text += wxString::Format(
-        "</tr>"
-        "</table>"
-        "</font>"
-        "</font>"
-        "</body>"
-        "</html>"
-             );
+   
     wxFont font = get_default_font_for_dpi(get_dpi_for_window(this));
     const int fs = font.GetPointSize();
     int size[] = { fs,fs,fs,fs,fs,fs,fs };
@@ -735,7 +759,7 @@ void PageMaterials::set_compatible_printers_html_window(const std::vector<std::s
 
 void PageMaterials::clear_compatible_printers_label()
 {
-    set_compatible_printers_html_window(std::vector<std::string>());
+    set_compatible_printers_html_window(std::vector<std::string>(), false);
 }
 
 void PageMaterials::on_material_hovered(int sel_material)
@@ -776,7 +800,7 @@ void PageMaterials::on_material_highlighted(int sel_material)
             }
         }
     }
-    set_compatible_printers_html_window(names);
+    set_compatible_printers_html_window(names, names.size() == materials->printers.size());
 }
 
 void PageMaterials::update_lists(int sel_printer, int sel_type, int sel_vendor)
@@ -833,7 +857,7 @@ void PageMaterials::update_lists(int sel_printer, int sel_type, int sel_vendor)
 					}
 					});
 			}
-
+            sort_list_data(list_type, true, true);
 		}
 
 		sel_printer_prev = sel_printers_count;
@@ -870,6 +894,7 @@ void PageMaterials::update_lists(int sel_printer, int sel_type, int sel_vendor)
 					}
 					});
 			}
+            sort_list_data(list_vendor, true, false);
 		}
 
 		sel_type_prev = sel_type;
@@ -922,10 +947,109 @@ void PageMaterials::update_lists(int sel_printer, int sel_type, int sel_vendor)
 						wizard_p()->appconfig_new.set(section, p->name, "1");
 					});
 			}
+            sort_list_data(list_profile);
 		}
 
 		sel_vendor_prev = sel_vendor;
 	}
+}
+
+void PageMaterials::sort_list_data(StringList* list, const std::vector<std::reference_wrapper<const std::string>>& data, bool add_All_item, bool material_type_ordering)
+{
+    // sort data
+    // first should be <all>
+    // then prusa profiles
+    // then the rest
+    // in alphabetical order
+    std::vector<std::reference_wrapper<const std::string>> prusa_profiles;
+    std::vector<std::reference_wrapper<const std::string>> other_profiles;
+    for (auto item : data) {
+        if (item.get() == EMPTY) // do not sort <all> item
+            continue;
+        if (item.get().find("Prusa") != std::string::npos)
+            prusa_profiles.push_back(item);
+        else
+            other_profiles.push_back(item);
+    }
+    
+    std::sort(prusa_profiles.begin(), prusa_profiles.end(), [](std::reference_wrapper<const std::string> a, std::reference_wrapper<const std::string> b) {
+        return a.get() < b.get();
+        });
+    std::sort(other_profiles.begin(), other_profiles.end(), [](std::reference_wrapper<const std::string> a, std::reference_wrapper<const std::string> b) {
+        return a.get() < b.get();
+        });
+    list->Clear();
+    if (add_All_item)
+        list->append(_(L("(All)")), &EMPTY);
+    for (const auto& item : prusa_profiles)
+        list->append(item, &const_cast<std::string&>(item.get()));
+    for (const auto& item : other_profiles)
+        list->append(item, &const_cast<std::string&>(item.get()));
+}
+void PageMaterials::sort_list_data(StringList* list, bool add_All_item, bool material_type_ordering)
+{
+// get data from list
+// sort data
+// first should be <all>
+// then prusa profiles
+// then the rest
+// in alphabetical order
+    
+    std::vector<std::reference_wrapper<const std::string>> prusa_profiles;
+    std::vector<std::reference_wrapper<const std::string>> other_profiles;
+    for (int i = 0 ; i < list->size(); ++i) {
+        const std::string& data = list->get_data(i);
+        if (data == EMPTY) // do not sort <all> item
+            continue;
+        if (data.find("Prusa") != std::string::npos)
+            prusa_profiles.push_back(data);
+        else 
+            other_profiles.push_back(data);
+    }
+    std::sort(prusa_profiles.begin(), prusa_profiles.end(), [](std::reference_wrapper<const std::string> a, std::reference_wrapper<const std::string> b) {
+        return a.get() < b.get();
+        });
+    std::sort(other_profiles.begin(), other_profiles.end(), [](std::reference_wrapper<const std::string> a, std::reference_wrapper<const std::string> b) {
+        return a.get() < b.get();
+        });
+    list->Clear();
+    if (add_All_item)
+        list->append(_(L("(All)")), &EMPTY);
+    for (const auto& item : prusa_profiles)
+        list->append(item, &const_cast<std::string&>(item.get()));
+    for (const auto& item : other_profiles)
+        list->append(item, &const_cast<std::string&>(item.get()));
+}     
+
+void PageMaterials::sort_list_data(PresetList* list)
+{
+    // sort data
+    // then prusa profiles
+    // then the rest
+    // in alphabetical order
+    std::vector<std::reference_wrapper<const std::string>> prusa_profiles;
+    std::vector<std::reference_wrapper<const std::string>> other_profiles;
+    for (int i = 0; i < list->size(); ++i) {
+        const std::string& data = list->get_data(i);
+        if (data == EMPTY) // do not sort <all> item
+            continue;
+        if (data.find("Prusa") != std::string::npos)
+            prusa_profiles.push_back(data);
+        else
+            other_profiles.push_back(data);
+    }
+    std::sort(prusa_profiles.begin(), prusa_profiles.end(), [](std::reference_wrapper<const std::string> a, std::reference_wrapper<const std::string> b) {
+        return a.get() < b.get();
+        });
+    std::sort(other_profiles.begin(), other_profiles.end(), [](std::reference_wrapper<const std::string> a, std::reference_wrapper<const std::string> b) {
+        return a.get() < b.get();
+        });
+    list->Clear();
+    for (const auto& item : prusa_profiles)
+        list->append(item, &const_cast<std::string&>(item.get()));
+    for (const auto& item : other_profiles)
+        list->append(item, &const_cast<std::string&>(item.get()));
+
 }
 
 void PageMaterials::select_material(int i)
