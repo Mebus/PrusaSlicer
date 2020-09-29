@@ -343,7 +343,6 @@ struct PageMaterials: ConfigWizardPage
     void set_compatible_printers_html_window(const std::vector<std::string>& printer_names, bool all_printers = false);
     void clear_compatible_printers_label();
 
-    void sort_list_data(StringList* list, const std::vector<std::reference_wrapper<const std::string>>& data, bool add_All_item, bool material_type_ordering);
     void sort_list_data(StringList* list, bool add_All_item, bool material_type_ordering);
     void sort_list_data(PresetList* list);
 

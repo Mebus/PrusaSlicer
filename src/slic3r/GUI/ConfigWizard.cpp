@@ -664,13 +664,10 @@ void PageMaterials::reload_presets()
 
 	list_printer->append(_(L("(All)")), &EMPTY);
     list_printer->SetLabelMarkup("<b>bald</b>");
-    std::vector<std::reference_wrapper<const std::string>>names_to_list;
-
 	for (const Preset* printer : materials->printers) {
-		//list_printer->append(printer->name, &printer->name);
-        names_to_list.push_back(printer->name);
+		list_printer->append(printer->name, &printer->name);
 	}
-    sort_list_data(list_printer, names_to_list, true, false);
+    sort_list_data(list_printer, true, false);
     if (list_printer->GetCount() > 0) {
         list_printer->SetSelection(0);
 		sel_printer_prev = wxNOT_FOUND;
@@ -954,38 +951,6 @@ void PageMaterials::update_lists(int sel_printer, int sel_type, int sel_vendor)
 	}
 }
 
-void PageMaterials::sort_list_data(StringList* list, const std::vector<std::reference_wrapper<const std::string>>& data, bool add_All_item, bool material_type_ordering)
-{
-    // sort data
-    // first should be <all>
-    // then prusa profiles
-    // then the rest
-    // in alphabetical order
-    std::vector<std::reference_wrapper<const std::string>> prusa_profiles;
-    std::vector<std::reference_wrapper<const std::string>> other_profiles;
-    for (auto item : data) {
-        if (item.get() == EMPTY) // do not sort <all> item
-            continue;
-        if (item.get().find("Prusa") != std::string::npos)
-            prusa_profiles.push_back(item);
-        else
-            other_profiles.push_back(item);
-    }
-    
-    std::sort(prusa_profiles.begin(), prusa_profiles.end(), [](std::reference_wrapper<const std::string> a, std::reference_wrapper<const std::string> b) {
-        return a.get() < b.get();
-        });
-    std::sort(other_profiles.begin(), other_profiles.end(), [](std::reference_wrapper<const std::string> a, std::reference_wrapper<const std::string> b) {
-        return a.get() < b.get();
-        });
-    list->Clear();
-    if (add_All_item)
-        list->append(_(L("(All)")), &EMPTY);
-    for (const auto& item : prusa_profiles)
-        list->append(item, &const_cast<std::string&>(item.get()));
-    for (const auto& item : other_profiles)
-        list->append(item, &const_cast<std::string&>(item.get()));
-}
 void PageMaterials::sort_list_data(StringList* list, bool add_All_item, bool material_type_ordering)
 {
 // get data from list
@@ -1001,17 +966,41 @@ void PageMaterials::sort_list_data(StringList* list, bool add_All_item, bool mat
         const std::string& data = list->get_data(i);
         if (data == EMPTY) // do not sort <all> item
             continue;
-        if (data.find("Prusa") != std::string::npos)
+        if (!material_type_ordering && data.find("Prusa") != std::string::npos)
             prusa_profiles.push_back(data);
         else 
             other_profiles.push_back(data);
     }
-    std::sort(prusa_profiles.begin(), prusa_profiles.end(), [](std::reference_wrapper<const std::string> a, std::reference_wrapper<const std::string> b) {
-        return a.get() < b.get();
-        });
-    std::sort(other_profiles.begin(), other_profiles.end(), [](std::reference_wrapper<const std::string> a, std::reference_wrapper<const std::string> b) {
-        return a.get() < b.get();
-        });
+    if(material_type_ordering) {
+        
+        const ConfigOptionDef* def = print_config_def.get("filament_type");
+        std::vector<std::string>enum_values = def->enum_values;
+        int end_of_sorted = 0;
+        for (size_t vals = 0; vals < enum_values.size(); vals++) {
+            for (size_t profs = end_of_sorted; profs < other_profiles.size(); profs++)
+            {
+                // find instead compare because PET vs PETG
+                if (other_profiles[profs].get().find(enum_values[vals]) != std::string::npos) {
+                    //swap
+                    if(profs != end_of_sorted) {
+                        std::reference_wrapper<const std::string> aux = other_profiles[end_of_sorted];
+                        other_profiles[end_of_sorted] = other_profiles[profs];
+                        other_profiles[profs] = aux;
+                    }
+                    end_of_sorted++;
+                    break;
+                }
+            }
+        }
+    } else {
+        std::sort(prusa_profiles.begin(), prusa_profiles.end(), [](std::reference_wrapper<const std::string> a, std::reference_wrapper<const std::string> b) {
+            return a.get() < b.get();
+            });
+        std::sort(other_profiles.begin(), other_profiles.end(), [](std::reference_wrapper<const std::string> a, std::reference_wrapper<const std::string> b) {
+            return a.get() < b.get();
+            });
+    }
+    
     list->Clear();
     if (add_All_item)
         list->append(_(L("(All)")), &EMPTY);
