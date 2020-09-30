@@ -566,14 +566,12 @@ PageMaterials::PageMaterials(ConfigWizard *parent, Materials *materials, wxStrin
     , list_type(new StringList(this))
     , list_vendor(new StringList(this))
     , list_profile(new PresetList(this))
-    //, compatible_printers(new wxStaticText(this, wxID_ANY, _(L(""))))
 {
     append_spacer(VERTICAL_SPACING);
 
     const int em = parent->em_unit();
     const int list_h = 30*em;
 
-	//list_printer->SetWindowStyle(wxLB_EXTENDED);
 
 	list_printer->SetMinSize(wxSize(23*em, list_h));
     list_type->SetMinSize(wxSize(8*em, list_h));
@@ -631,13 +629,13 @@ PageMaterials::PageMaterials(ConfigWizard *parent, Materials *materials, wxStrin
 
     sel_all->Bind(wxEVT_BUTTON, [this](wxCommandEvent &) { select_all(true); });
     sel_none->Bind(wxEVT_BUTTON, [this](wxCommandEvent &) { select_all(false); });
-
+    /*
     Bind(wxEVT_PAINT, [this](wxPaintEvent& evt) {on_paint();});
 
     list_profile->Bind(wxEVT_MOTION, [this](wxMouseEvent& evt) { on_mouse_move_on_profiles(evt); });
     list_profile->Bind(wxEVT_ENTER_WINDOW, [this](wxMouseEvent& evt) { on_mouse_enter_profiles(evt); });
     list_profile->Bind(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent& evt) { on_mouse_leave_profiles(evt); });
-    
+    */
     reload_presets();
     set_compatible_printers_html_window(std::vector<std::string>(), false);
 }
@@ -670,7 +668,8 @@ void PageMaterials::reload_presets()
     sort_list_data(list_printer, true, false);
     if (list_printer->GetCount() > 0) {
         list_printer->SetSelection(0);
-		sel_printer_prev = wxNOT_FOUND;
+		sel_printer_count_prev = wxNOT_FOUND;
+        sel_printer_item_prev = wxNOT_FOUND;
         sel_type_prev = wxNOT_FOUND;
         sel_vendor_prev = wxNOT_FOUND;
         update_lists(0, 0, 0);
@@ -808,7 +807,7 @@ void PageMaterials::update_lists(int sel_printer, int sel_type, int sel_vendor)
 	wxArrayInt sel_printers;
 	int sel_printers_count = list_printer->GetSelections(sel_printers);
 
-	if (sel_printers_count != sel_printer_prev) {
+	if (sel_printers_count != sel_printer_count_prev || (sel_printers_count == 1 && sel_printer_item_prev != sel_printer && sel_printer != -1)) {
         // Refresh type list
 		list_type->Clear();
 		list_type->append(_(L("(All)")), &EMPTY);
@@ -857,7 +856,8 @@ void PageMaterials::update_lists(int sel_printer, int sel_type, int sel_vendor)
             sort_list_data(list_type, true, true);
 		}
 
-		sel_printer_prev = sel_printers_count;
+		sel_printer_count_prev = sel_printers_count;
+        sel_printer_item_prev = sel_printer;
 		sel_type = 0;
 		sel_type_prev = wxNOT_FOUND;
 		list_type->SetSelection(sel_type);
@@ -1069,7 +1069,8 @@ void PageMaterials::clear()
     list_type->Clear();
     list_vendor->Clear();
     list_profile->Clear();
-	sel_printer_prev = wxNOT_FOUND;
+	sel_printer_count_prev = wxNOT_FOUND;
+    sel_printer_item_prev = wxNOT_FOUND;
     sel_type_prev = wxNOT_FOUND;
     sel_vendor_prev = wxNOT_FOUND;
     presets_loaded = false;
